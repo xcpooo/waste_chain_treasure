@@ -2,19 +2,14 @@ import "./Token_interface.sol";
 import "./Order_interface.sol";
 import "./Sponsor_interface.sol";
 import "./Tax_interface.sol";
-import "./Supervise_interface.sol";
 import "./config.sol";
-import "./Table.sol";
 pragma solidity ^0.4.25;
 
 
-contract Order is Order_interface,config{
+contract New_order is config{
     address token_address=config_token_address;
     address Tax_address=config_tax_address;
-    address Supervise_address=config_tax_address;
-    Tax_interface tax=Tax_interface(Tax_address);
     Token_interface tokenWaste=Token_interface(token_address);
-    Supervise_interface supervise=Supervise_interface(Supervise_address);
     address public owner; //发布该订单的持有者
     uint256 public order_prize; //订单最终价格
     uint256 public order_end; //订单结束时间
@@ -23,14 +18,11 @@ contract Order is Order_interface,config{
     bool public ended; //订单结束情况
     uint256 public deadline; //订单结束时间
     string phone_number; //手机号
-	string public city;//模糊地址
-	string public district;//区
-    string public street;//街道 
-    string public community;//社区 
+	string public fuzzy_location;//模糊地址
 	string acc_location;//地址  
     uint order_comfirm_status;  
-	//订单的确认状态，订单确认状态有3种，1为开始接单状态，2为接单状态（未取件/配送）
-	//3为取件后用户确定，4卖家确定 
+	//订单的确认状态，订单确认状态有3种，0为没人接单状态，1为接单状态（未取件/配送）
+	//2为取件后用户确定，强制转账成功后，状态为3,ended标志设置为
 
     uint256[6] public  waste_list=[0,0,0,0,0,0];
 	//订单中废品的情况,单位是克
@@ -72,22 +64,17 @@ contract Order is Order_interface,config{
     }
 	
 	//订单开始
-    function start_order(string _phone_number,string _city,string _district,string _street,string _community,string _acc_location ) public {
+    function start_order(string _phone_number,string _fuzzy_location,string _acc_location ) public {
         require(msg.sender == owner);
         order_comfirm_status=1;
         order_start=now;
         order_end = order_start + 60 minutes;
         phone_number=_phone_number;
-        city=_city;
-        district=_district;
-        street=_street;
-        community=_community;
+        fuzzy_location=_fuzzy_location;
         acc_location=_acc_location;
-        supervise.Supervise_order();
-        //接收监管 
     }
     
-    //接单
+        //接单
     function recive_order() public{
         uint256 sub=order_end-now;
         require(sub>=0, "Order already ended.");
@@ -101,7 +88,7 @@ contract Order is Order_interface,config{
 		require(msg.sender==owner);
 	}
 	
-	//用户确定
+	    //用户确定
 	function order_comfirm_by_seller() public{
         require(msg.sender==owner,"You're not the seller");
 		require(order_comfirm_status==2,"Waiting for bidder");
@@ -128,7 +115,7 @@ contract Order is Order_interface,config{
     function withdraw_by_owner() public {
 	    require(msg.sender==owner,"You're not the owner");
 	    require(ended,"order is not ended");
-
+        Tax_interface tax=Tax_interface(Tax_address);
         uint256 tax_account=tax.Calculation_tax(address(this));
         require(tokenWaste.approve(Tax_address,tax_account),"approve error");
         tax.Tax_order();
@@ -151,20 +138,8 @@ contract Order is Order_interface,config{
 	    return buyer;
 	}
 	
-	function get_city() view public returns(string){
-	    return city;
-	}
-	
-	function get_district() view public returns(string){
-	    return district;
-	}
-
-	function get_street() view public returns(string){
-	    return street;
-	}
-	
-	function get_community() view public returns(string){
-	    return community;
+	function get_fuzzy_location() view public returns(string){
+	    return fuzzy_location;
 	}
 	
 	function get_order_comfirm_status() view public returns(uint){
@@ -182,30 +157,7 @@ contract Order is Order_interface,config{
     function get_waste_prize_list(uint b) view public returns(uint){
 	    return waste_prize_list[b];
 	}
-
-    //
-	function insert(string order_address,string city,string district,string steet,uint order_status){
-	    TableFactory tableFactory;
-	    Table table = tableFactory.openTable( "Order_table");
-        Entry entry = table.newEntry();
-        entry.set("order_address", order_address);
-        entry.set("city", city);
-        entry.set("district", district);
-        entry.set("street", street);
-        entry.set("order_status", order_status);
-        int256 count = table.insert("order_address", entry);
-	}
 	
-	//
-	function insert(string order_address,string class,uint weight,uint prize){
-	    TableFactory tableFactory;
-	    Table table = tableFactory.openTable( "Waste_table");
-        Entry entry = table.newEntry();
-        entry.set("order_address", order_address);
-        entry.set("class", class);
-        entry.set("weight", weight);
-        entry.set("prize", prize);
-        int256 count = table.insert("order_address", entry);
-	}
+
 
 }

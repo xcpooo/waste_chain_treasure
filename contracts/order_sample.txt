@@ -1,0 +1,79 @@
+contract Order is Order_interface{
+    address token_address=0x123456789654;
+	//token地址为RMB地址
+    address Tax_address=config_tax_address;
+	//tax地址为广州税务局的部署的增值税地址
+    address Supervise_address=config_tax_address;
+	//supervise地址为广州物价局的监管地址
+	
+    Tax_interface tax=Tax_interface(Tax_address);
+    Token_interface tokenWaste=Token_interface(token_address);
+    Supervise_interface supervise=Supervise_interface(Supervise_address);
+    
+...
+	
+	//开始订单，接收监管
+    function start_order(string _phone_number,string _city,string _district,string _street,string _community,string _acc_location ) public {
+        require(msg.sender == owner);
+        order_comfirm_status=1;
+        order_start=now;
+        order_end = order_start + 60 minutes;
+        phone_number=_phone_number;
+        city=_city;
+        district=_district;
+        street=_street;
+        community=_community;
+        acc_location=_acc_location;
+		
+        supervise.Supervise_order();
+        //接收监管 
+    }
+    
+    //买家接单
+    function recive_order() public{
+		...
+    }
+    
+	//隐藏信息,只有接单的人可以获得隐藏信息，精确地址和手机号码
+	function private_message() public returns (string ,string){
+		require(msg.sender==buyer);
+		return (phone_number, acc_location);
+	}
+	
+	//公司上门回收,（可能）修改订单
+	function order_modify(){
+		...
+	}
+	
+	//用户确定
+	function order_comfirm_by_seller() public{
+		...
+    }
+
+	//买家确认，向订单汇款，订单结束
+	function order_comfirm_by_buyer() payable public{
+		...
+	}
+	
+	//从订单中提款，并自动扣除税款
+    function withdraw_by_owner() public {
+	    require(msg.sender==owner,"You're not the owner");
+	    require(ended,"order is not ended");
+
+        uint256 tax_account=tax.Calculation_tax(address(this));
+        require(tokenWaste.approve(Tax_address,tax_account),"approve error");
+        tax.Tax_order();
+        order_prize=order_prize-tax_account;
+	    require(tokenWaste.transferTo(owner,order_prize));
+	}
+	
+	//指定赞助智能合约地址，接受赞助
+	function revice_spornor(address address_of_sponsor) public returns(uint256) {
+	    require(msg.sender==owner);
+	    Sponsor_interface sponsor=Sponsor_interface(address_of_sponsor);
+	    uint256 sponsor_fund=sponsor.Sponsor_order(address(this));
+	    return sponsor_fund;
+	}
+...
+
+}

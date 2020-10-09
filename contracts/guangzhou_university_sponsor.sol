@@ -8,7 +8,8 @@ pragma solidity ^0.4.25;
 */
 
 contract guangzhou_university_sponsor is Sponsor_interface,config {
-    address token_address=config_credit_token_address;
+    address token_address=config.credit_token_address;
+    //地址填写学分token的地址
     uint256  balance;
     mapping(address => uint256) public donationOf;
     address public owner;
@@ -17,14 +18,15 @@ contract guangzhou_university_sponsor is Sponsor_interface,config {
     
     constructor (){
         owner=msg.sender;
-        sponsor_account=5;
+        sponsor_account=20;
+	//赞助20学分token
         balance=0;
     }
     
     function Sponsor_order(address order_address) payable public returns(uint256 _sponsor_account){
        Order_interface order=Order_interface(order_address);
        if (keccak256(order.get_city())==keccak256("guangzhou")){
-	       bool sucess=tokenwaste.transferTo(order.get_owner(),order.get_order_prize()/10);
+	       bool sucess=tokenwaste.transferTo(order.get_owner(),sponsor_account);
 	   }
 	   return sponsor_account;
     }
